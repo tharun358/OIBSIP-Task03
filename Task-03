@@ -1,0 +1,69 @@
+# OIBSIP-Task03
+
+import pandas as pd
+import string
+import re
+
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, confusion_matrix, classification_report
+
+def load_data(filepath):
+    # The provided file uses "spam" and "ham" labels
+    df = pd.read_csv(filepath, encoding='latin-1')
+    # The first two columns: v1 (label), v2 (text)
+    df = df[['v1', 'v2']]
+    df.columns = ['label', 'text']
+    return df
+
+    def clean_text(text):
+    text = text.lower()
+    text = re.sub(f'[{re.escape(string.punctuation)}]', '', text)
+    text = re.sub(r'\d+', '', text)
+    text = text.strip()
+    return text
+
+    def preprocess(df):
+    df['text'] = df['text'].apply(clean_text)
+    df['label'] = df['label'].map({'ham': 0, 'spam': 1})
+    return df
+
+    def split(df):
+    X = df['text']
+    y = df['label']
+    return train_test_split(X, y, test_size=0.2, random_state=42)
+
+    def train_model(X_train, y_train):
+    vectorizer = TfidfVectorizer(stop_words='english')
+    X_train_vec = vectorizer.fit_transform(X_train)
+    clf = MultinomialNB()
+    clf.fit(X_train_vec, y_train)
+    return vectorizer, clf
+
+    def evaluate(vectorizer, clf, X_test, y_test):
+    X_test_vec = vectorizer.transform(X_test)
+    preds = clf.predict(X_test_vec)
+    print("Accuracy:", accuracy_score(y_test, preds))
+    print("Confusion Matrix:\n", confusion_matrix(y_test, preds))
+    print("Classification Report:\n", classification_report(y_test, preds))
+
+    def predict_email(email, vectorizer, clf):
+    email = clean_text(email)
+    email_vec = vectorizer.transform([email])
+    pred = clf.predict(email_vec)[0]
+    return "Spam" if pred == 1 else "Ham (Not Spam)"
+
+if __name__ == "__main__":
+    # Update the path to your spam.csv file if required
+    df = load_data('spam.csv')
+    df = preprocess(df)
+    X_train, X_test, y_train, y_test = split(df)
+    vectorizer, clf = train_model(X_train, y_train)
+    evaluate(vectorizer, clf, X_test, y_test)
+
+    # Try predicting a new message
+    example = "WINNER!! You have won a free ticket to Bahamas. Click here to claim."
+    print(f"\nExample message: '{example}'")
+    print("Prediction:", predict_email(example, vectorizer, clf))
+    
